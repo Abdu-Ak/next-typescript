@@ -1,58 +1,108 @@
-import { CarCard, CustumFilter, Hero, SearchBar } from "@/components";
+/* eslint-disable react-hooks/exhaustive-deps */
+"use client";
+import { CarCard, Hero, SearchBar, ShowMore } from "@/components";
+import CustomFilter from "@/components/CustumFilter";
+import { fuels, yearsOfProduction } from "@/constants";
+import { HomeProps } from "@/types";
 import { fetchCars } from "@/utils";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { ThreeDots } from "react-loader-spinner";
 
-export default async function Home() {
- 
-  const allCars = await fetchCars()
+export default function Home() {
+  const [allCars, setAllCars] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const isDataEmpty = !Array.isArray(allCars) || allCars.length < 1 || !allCars
-  
+  const [manufacturer, setManufacturer] = useState("");
+  const [model, setModel] = useState("");
+
+  const [fuel, setFuel] = useState("");
+  const [year, setYear] = useState(2022);
+
+  const [limit, setLimit] = useState(10);
+
+  const getCars = async () => {
+    setLoading(true);
+
+    try {
+      const result = await fetchCars({
+        manufacturer: manufacturer || "",
+        year: year || 2022,
+        fuel: fuel || "",
+        limit: limit || 10,
+        model: model || "",
+      });
+
+      setAllCars(result);
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getCars();
+  }, [fuel, year, limit, manufacturer, model]);
+
+  const isDataEmpty = !Array.isArray(allCars) || allCars.length < 1 || !allCars;
 
   return (
     <main className="overflow-hidden">
-      
+      <Hero />
 
-       <Hero/>
-   
-       <div className="mt-12 padding-x padding-y max-width" id="discover"
-       >
+      <div className="mt-12 padding-x padding-y max-width" id="discover">
         <div className="home__text-container">
-          <h1 className="text-4xl font-extrabold">Car Catalogue </h1>
-          <p>Explore the cars you might like</p>
+          <h1 className="text-4xl font-extrabold">Car Catalogue</h1>
+          <p>Explore out cars you might like</p>
         </div>
 
-        <div className="home__filter">
-          <SearchBar/>
+        <div className="home__filters">
+          <SearchBar setManufacturer={setManufacturer} setModel={setModel} />
 
           <div className="home__filter-container">
-            <CustumFilter title="fuel"/>
-            <CustumFilter title="year" />
-
-
+            <CustomFilter title="fuel" options={fuels} setFilter={setFuel} />
+            <CustomFilter
+              title="year"
+              options={yearsOfProduction}
+              setFilter={setYear}
+            />
           </div>
         </div>
 
-        {
-          !isDataEmpty ? (
-            <section>
-             <div className="home__car-wrapper">
-              {allCars?.map((car)=> (
-                <CarCard car={car}/>
+        {allCars.length > 0 ? (
+          <section>
+            <div className="home__cars-wrapper">
+              {allCars?.map((car) => (
+                <CarCard key={car} car={car} />
               ))}
-             </div>
-            </section>
-          ) : (
-            <div className="home__error-container">
-              <h2 className="text-black text-xl font-bold">
-              Oops, no results..
-              </h2>
-              <p>{allCars?.message}</p>
             </div>
-          )
-        }
 
-       </div>
-       
+            {loading && (
+              <div className="mt-16 w-full flex-center">
+                <ThreeDots
+                  height="80"
+                  width="80"
+                  radius="9"
+                  color="#4c73ff"
+                  ariaLabel="three-dots-loading"
+                  wrapperStyle={{}}
+                  visible={true}
+                />
+              </div>
+            )}
+
+            <ShowMore
+              pageNumber={limit / 10}
+              setLimit={setLimit}
+              isNext={limit > allCars.length}
+            />
+          </section>
+        ) : (
+          <div className="home__error-container">
+            <h2 className="text-black text-xl font-bold">Oops, no results</h2>
+          </div>
+        )}
+      </div>
     </main>
-  )
+  );
 }
